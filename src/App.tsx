@@ -1,10 +1,10 @@
 import { useTournamentStore } from './store/tournamentStore';
 import TournamentBracket from './components/TournamentBracket';
 import GroupStagePanel from './components/GroupStagePanel';
-import { Trophy, RotateCcw, Play } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 function App() {
-  const { currentView, setCurrentView, resetSimulation } = useTournamentStore();
+  const { currentView, setCurrentView } = useTournamentStore();
 
   return (
     <div className="bg-zinc-950 text-zinc-200 h-screen flex flex-col overflow-hidden relative selection:bg-zinc-800 selection:text-white">
@@ -43,33 +43,6 @@ function App() {
               }`}
             >
               Knockouts
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-5">
-          {/* Year Selector Dropdown (Visual) */}
-          <button className="hidden sm:flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors group focus:outline-none">
-            <span>2026 Tournament</span>
-            <svg className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          <div className="hidden sm:block w-px h-4 bg-zinc-800" />
-
-          {/* Action Controls */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={resetSimulation}
-              className="text-zinc-500 hover:text-zinc-200 transition-colors flex items-center p-1 focus:outline-none rounded hover:bg-zinc-900"
-              title="Reset Bracket"
-            >
-              <RotateCcw className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-            <button className="h-8 px-4 bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.1)] transition-all active:scale-95 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-zinc-950">
-              <Play className="w-3 h-3" strokeWidth={1.5} />
-              Simulate All
             </button>
           </div>
         </div>

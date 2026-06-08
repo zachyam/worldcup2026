@@ -1,14 +1,17 @@
 import { useTournamentStore } from '../store/tournamentStore';
 import { useState } from 'react';
-import { Shield, Trophy, ChevronUp, ChevronDown, Grip } from 'lucide-react';
+import { Shield, Trophy, ChevronUp, ChevronDown, Grip, Lock } from 'lucide-react';
 import type { Team, GroupStanding } from '../types/tournament';
 
 export default function GroupStagePanel() {
-  const { groups, selectedGroup, setSelectedGroup, setGroupRanking } = useTournamentStore();
+  const { groups, selectedGroup, setSelectedGroup, setGroupRanking, confirmedGroups, setGroupConfirmed } = useTournamentStore();
   const [draggedTeam, setDraggedTeam] = useState<Team | null>(null);
   const [draggedOver, setDraggedOver] = useState<number | null>(null);
 
   const currentGroup = groups.find(g => g.name === selectedGroup) || groups[0];
+  const isConfirmed = confirmedGroups[currentGroup.name] ?? true;
+  const unconfirmedGroups = groups.filter(g => !confirmedGroups[g.name]).map(g => g.name);
+  const allConfirmed = groups.length > 0 && unconfirmedGroups.length === 0;
 
   // Get current rankings or use default order
   const getCurrentRankings = () => {
@@ -85,14 +88,14 @@ export default function GroupStagePanel() {
                 px-4 py-2 rounded-lg font-medium transition-all
                 ${selectedGroup === group.name
                   ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/25'
-                  : group.standings.length === 4
+                  : confirmedGroups[group.name]
                     ? 'bg-green-900/40 text-green-400 border border-green-600/30'
                     : 'bg-gray-800/60 text-gray-400 hover:bg-gray-700/60 hover:text-white'
                 }
               `}
             >
               Group {group.name}
-              {group.standings.length === 4 && (
+              {confirmedGroups[group.name] && (
                 <span className="ml-2 text-xs">✓</span>
               )}
             </button>
@@ -103,14 +106,27 @@ export default function GroupStagePanel() {
       {/* Group Ranking Interface */}
       <div className="max-w-2xl mx-auto">
         <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-          <div className="px-6 py-4 bg-gray-900/60 border-b border-gray-700/50">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Group {currentGroup.name} - Predicted Rankings
-            </h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Drag teams to reorder or use arrow buttons
-            </p>
+          <div className="px-6 py-4 bg-gray-900/60 border-b border-gray-700/50 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                Group {currentGroup.name} - Predicted Rankings
+              </h3>
+              <p className="text-sm text-gray-400 mt-1">
+                Drag teams to reorder or use arrow buttons
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none shrink-0 mt-1">
+              <input
+                type="checkbox"
+                checked={isConfirmed}
+                onChange={(e) => setGroupConfirmed(currentGroup.name, e.target.checked)}
+                className="w-4 h-4 accent-green-500 cursor-pointer"
+              />
+              <span className={isConfirmed ? 'text-green-400 font-medium' : 'text-gray-400'}>
+                Confirm group
+              </span>
+            </label>
           </div>
 
           <div className="p-6 space-y-3">
@@ -258,25 +274,38 @@ export default function GroupStagePanel() {
               <div
                 className="h-full bg-gradient-to-r from-blue-600 to-blue-500 transition-all"
                 style={{
-                  width: `${(groups.filter(g => g.standings.length === 4).length / groups.length) * 100}%`
+                  width: `${(groups.filter(g => confirmedGroups[g.name]).length / groups.length) * 100}%`
                 }}
               />
             </div>
             <span className="text-sm text-gray-400">
-              {groups.filter(g => g.standings.length === 4).length} / {groups.length} groups
+              {groups.filter(g => confirmedGroups[g.name]).length} / {groups.length} confirmed
             </span>
           </div>
-          {groups.every(g => g.standings.length === 4) && (
+          {allConfirmed && (
             <p className="text-green-400 text-sm mt-3">
-              ✓ All groups complete! Knockout bracket has been generated.
+              ✓ All groups confirmed! You can now rank the third-placed teams.
             </p>
           )}
         </div>
       </div>
 
-      {/* Third Place Teams */}
+      {/* Third Place Teams — unlocked only once every group is confirmed */}
       <div className="mt-8">
-        <ThirdPlaceRanking />
+        {allConfirmed ? (
+          <ThirdPlaceRanking />
+        ) : (
+          <div className="max-w-4xl mx-auto bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8 text-center">
+            <Lock className="w-8 h-8 text-gray-500 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-300">Third Place Teams Ranking</h3>
+            <p className="text-sm text-gray-400 mt-2">
+              Confirm every group to unlock the third-place ranking.
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Still to confirm: {unconfirmedGroups.map(name => `Group ${name}`).join(', ')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

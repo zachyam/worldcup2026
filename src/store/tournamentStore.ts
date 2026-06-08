@@ -2,19 +2,43 @@ import { create } from 'zustand';
 import { SimulationEngine } from '../utils/simulationEngine';
 import type { Group, KnockoutMatch, GroupStanding, SimulationScenario } from '../types/tournament';
 
+// Build placeholder standings for a group from an ordered list of team names.
+function buildStandings(group: Group, rankingNames: string[]): GroupStanding[] {
+  return rankingNames.map((teamName, index) => {
+    const team = group.teams.find(t => t.name === teamName)!;
+    const won = index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0;
+    return {
+      team,
+      position: index + 1,
+      played: 3,
+      won,
+      drawn: 0,
+      lost: 3 - won,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDifference: 0,
+      points: index === 0 ? 9 : index === 1 ? 6 : index === 2 ? 3 : 0
+    };
+  });
+}
+
 interface TournamentStore {
   simulation: SimulationEngine;
   groups: Group[];
   knockoutMatches: KnockoutMatch[];
   thirdPlaceTeams: GroupStanding[];
+  // Whether each group's predicted ranking has been confirmed by the user.
+  confirmedGroups: Record<string, boolean>;
   currentView: 'groups' | 'knockout' | 'insights';
   selectedGroup: string | null;
   scenarios: SimulationScenario[];
 
   // Actions
+  initializeGroups: () => void;
   updateMatchResult: (matchId: string, team1Score: number, team2Score: number) => void;
   updateKnockoutResult: (matchId: string, winnerId: string) => void;
   setGroupRanking: (groupName: string, rankings: string[]) => void;
+  setGroupConfirmed: (groupName: string, confirmed: boolean) => void;
   setThirdPlaceRanking: (rankings: GroupStanding[]) => void;
   generateKnockout: () => void;
   resetSimulation: () => void;
@@ -29,9 +53,37 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   groups: [],
   knockoutMatches: [],
   thirdPlaceTeams: [],
+  confirmedGroups: {},
   currentView: 'groups',
   selectedGroup: 'A',
   scenarios: [],
+
+  // Seed every group with its default predicted ranking (all confirmed), so
+  // the bracket and third-place list exist without the user dragging first.
+  initializeGroups: () => {
+    const { simulation } = get();
+    const baseGroups = simulation.getState().groups;
+    const groups = baseGroups.map(g => ({
+      ...g,
+      standings: g.standings.length === 4
+        ? g.standings
+        : buildStandings(g, g.teams.map(t => t.name))
+    }));
+
+    const confirmedGroups: Record<string, boolean> = {};
+    groups.forEach(g => { confirmedGroups[g.name] = true; });
+
+    simulation.groups = groups;
+    simulation.generateKnockoutMatches();
+    const state = simulation.getState();
+
+    set({
+      groups,
+      confirmedGroups,
+      knockoutMatches: state.knockoutMatches,
+      thirdPlaceTeams: state.thirdPlaceTeams
+    });
+  },
 
   updateMatchResult: (matchId, team1Score, team2Score) => {
     const { simulation } = get();
@@ -67,29 +119,16 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       const updatedGroups = [...groups];
       const group = updatedGroups[groupIndex];
 
-      // Create standings based on the rankings
-      const newStandings = rankings.map((teamName, index) => {
-        const team = group.teams.find(t => t.name === teamName)!;
-        return {
-          team,
-          position: index + 1,
-          played: 3,
-          won: index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0,
-          drawn: 0,
-          lost: 3 - (index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0),
-          goalsFor: 0,
-          goalsAgainst: 0,
-          goalDifference: 0,
-          points: index === 0 ? 9 : index === 1 ? 6 : index === 2 ? 3 : 0
-        };
-      });
-
       updatedGroups[groupIndex] = {
         ...group,
-        standings: newStandings
+        standings: buildStandings(group, rankings)
       };
 
-      set({ groups: updatedGroups });
+      // Reordering a group unconfirms it until the user re-confirms.
+      set((state) => ({
+        groups: updatedGroups,
+        confirmedGroups: { ...state.confirmedGroups, [groupName]: false }
+      }));
 
       // Auto-generate knockout if all groups have standings
       const allGroupsComplete = updatedGroups.every(g => g.standings.length === 4);
@@ -97,6 +136,12 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         get().generateKnockout();
       }
     }
+  },
+
+  setGroupConfirmed: (groupName, confirmed) => {
+    set((state) => ({
+      confirmedGroups: { ...state.confirmedGroups, [groupName]: confirmed }
+    }));
   },
 
   setThirdPlaceRanking: (rankings) => {
@@ -181,8 +226,6 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   }
 }));
 
-// Initialize with default state
-const store = useTournamentStore.getState();
-const initialState = store.simulation.getState();
-store.groups = initialState.groups;
-store.knockoutMatches = initialState.knockoutMatches;
+// Initialize with default (all-confirmed) standings so the bracket and
+// third-place ranking are ready immediately.
+useTournamentStore.getState().initializeGroups();
