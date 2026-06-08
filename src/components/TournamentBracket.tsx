@@ -108,16 +108,7 @@ export default function TournamentBracket() {
       {/* LEFT BRACKET */}
       <div className="flex items-center gap-10">
 
-        {/* Round of 32 - Left */}
-        <div className="flex flex-col gap-8">
-          {leftR32.map((match, i) => (
-            <div key={match.id} className="flex flex-col gap-4">
-              <MatchCard match={match} onWinnerSelect={handleMatchClick} />
-            </div>
-          ))}
-        </div>
-
-        {/* Round of 16 - Left */}
+        {/* Round of 32 (source matches) + Round of 16 - Left */}
         <div className="flex flex-col gap-16 justify-center">
           {leftR16.map((match, i) => {
             const sourceMatches = [leftR32[i*2], leftR32[i*2+1]];
@@ -210,16 +201,7 @@ export default function TournamentBracket() {
       {/* RIGHT BRACKET */}
       <div className="flex items-center gap-10 flex-row-reverse">
 
-        {/* Round of 32 - Right */}
-        <div className="flex flex-col gap-8">
-          {rightR32.map((match) => (
-            <div key={match.id} className="flex flex-col gap-4">
-              <MatchCard match={match} onWinnerSelect={handleMatchClick} />
-            </div>
-          ))}
-        </div>
-
-        {/* Round of 16 - Right */}
+        {/* Round of 32 (source matches) + Round of 16 - Right */}
         <div className="flex flex-col gap-16 justify-center">
           {rightR16.map((match, i) => {
             const sourceMatches = [rightR32[i*2], rightR32[i*2+1]];
