@@ -1,10 +1,26 @@
 import { useTournamentStore } from './store/tournamentStore';
 import TournamentBracket from './components/TournamentBracket';
 import GroupStagePanel from './components/GroupStagePanel';
-import { Trophy } from 'lucide-react';
+import ShareView from './components/ShareView';
+import ShareModal from './components/ShareModal';
+import { Trophy, Share2 } from 'lucide-react';
+import { useState } from 'react';
 
 function App() {
-  const { currentView, setCurrentView } = useTournamentStore();
+  const { currentView, setCurrentView, groups, confirmedGroups, knockoutMatches } = useTournamentStore();
+  const [shareOpen, setShareOpen] = useState(false);
+
+  // Render the read-only shared view when arriving via a #share=... link.
+  const [shareCode] = useState(() => {
+    const match = window.location.hash.match(/^#share=(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
+  if (shareCode !== null) return <ShareView code={shareCode} />;
+
+  // Sharing unlocks only once every group is confirmed and a champion is set.
+  const allConfirmed = groups.length > 0 && groups.every(g => confirmedGroups[g.name]);
+  const finalMatch = knockoutMatches.find(m => m.stage === 'final');
+  const canShare = allConfirmed && !!finalMatch?.result;
 
   return (
     <div className="bg-zinc-950 text-zinc-200 h-screen flex flex-col overflow-hidden relative selection:bg-zinc-800 selection:text-white">
@@ -46,12 +62,29 @@ function App() {
             </button>
           </div>
         </div>
+
+        {/* Share */}
+        <button
+          onClick={() => canShare && setShareOpen(true)}
+          disabled={!canShare}
+          title={canShare ? 'Share your bracket' : 'Confirm all groups and pick a champion to share'}
+          className={`h-8 px-4 text-xs font-medium rounded-md transition-all flex items-center gap-2 focus:outline-none ${
+            canShare
+              ? 'bg-zinc-100 hover:bg-white text-zinc-950 active:scale-95 cursor-pointer'
+              : 'bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+          }`}
+        >
+          <Share2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+          Share
+        </button>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative z-0 custom-scrollbar">
         {currentView === 'groups' ? <GroupStagePanel /> : <TournamentBracket />}
       </main>
+
+      {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

@@ -41,7 +41,7 @@ function groupTagFor(groups: Group[], team: Team | null): string | null {
 }
 
 export default function TournamentBracket() {
-  const { knockoutMatches, groups, generateKnockout, updateKnockoutResult } = useTournamentStore();
+  const { knockoutMatches, groups, generateKnockout, updateKnockoutResult, readOnly } = useTournamentStore();
   const [champion, setChampion] = useState<Team | null>(null);
 
   useEffect(() => {
@@ -96,6 +96,7 @@ export default function TournamentBracket() {
   const finalMatch = matchesByStage.final[0];
 
   const handleMatchClick = (match: KnockoutMatch, winner: Team) => {
+    if (readOnly) return;
     if (match.team1 && match.team2) {
       updateKnockoutResult(match.id, winner.name);
     }

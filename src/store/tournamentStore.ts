@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { SimulationEngine } from '../utils/simulationEngine';
+import { groups as initialGroups } from '../data/tournamentData';
+import { encodeShare, decodeShare, canonicalMatchIds, GROUP_LETTERS } from '../utils/shareCodec';
 import type { Group, KnockoutMatch, GroupStanding, SimulationScenario } from '../types/tournament';
 
 // Build placeholder standings for a group from an ordered list of team names.
@@ -29,12 +31,16 @@ interface TournamentStore {
   thirdPlaceTeams: GroupStanding[];
   // Whether each group's predicted ranking has been confirmed by the user.
   confirmedGroups: Record<string, boolean>;
+  // True when viewing a shared bracket (interactions disabled).
+  readOnly: boolean;
   currentView: 'groups' | 'knockout' | 'insights';
   selectedGroup: string | null;
   scenarios: SimulationScenario[];
 
   // Actions
   initializeGroups: () => void;
+  getShareCode: () => string;
+  loadShareCode: (code: string) => boolean;
   updateMatchResult: (matchId: string, team1Score: number, team2Score: number) => void;
   updateKnockoutResult: (matchId: string, winnerId: string) => void;
   setGroupRanking: (groupName: string, rankings: string[]) => void;
@@ -54,6 +60,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   knockoutMatches: [],
   thirdPlaceTeams: [],
   confirmedGroups: {},
+  readOnly: false,
   currentView: 'groups',
   selectedGroup: 'A',
   scenarios: [],
@@ -83,6 +90,85 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       knockoutMatches: state.knockoutMatches,
       thirdPlaceTeams: state.thirdPlaceTeams
     });
+  },
+
+  // Encode the current selection into a compact shareable code.
+  getShareCode: () => {
+    const { groups, thirdPlaceTeams, knockoutMatches } = get();
+
+    // Group rankings: 4 canonical team indices per group.
+    let g = '';
+    for (const letter of GROUP_LETTERS) {
+      const group = groups.find(x => x.name === letter)!;
+      const canonical = initialGroups.find(x => x.name === letter)!.teams;
+      const order = [...group.standings].sort((a, b) => a.position - b.position);
+      for (const standing of order) {
+        g += String(canonical.findIndex(t => t.name === standing.team.name));
+      }
+    }
+
+    // Third-place ranking: group letters in the user's order.
+    const t = thirdPlaceTeams.map(s => s.team.group).join('');
+
+    // Knockout winners: which side won each match, in canonical order.
+    const byId = new Map(knockoutMatches.map(m => [m.id, m]));
+    let k = '';
+    for (const id of canonicalMatchIds()) {
+      const m = byId.get(id);
+      k += (m && m.result && m.result.winner === m.team2) ? '1' : '0';
+    }
+
+    return encodeShare({ v: 1, g, t, k });
+  },
+
+  // Rebuild state from a shared code by replaying it through the engine.
+  loadShareCode: (code) => {
+    const payload = decodeShare(code);
+    if (!payload) return false;
+
+    const simulation = new SimulationEngine();
+    const baseGroups = simulation.getState().groups;
+
+    // Restore each group's ranking from the canonical team indices.
+    const groups = baseGroups.map(group => {
+      const pos = GROUP_LETTERS.indexOf(group.name);
+      const digits = payload.g.slice(pos * 4, pos * 4 + 4).split('');
+      const orderedNames = digits.map(d => group.teams[Number(d)].name);
+      return { ...group, standings: buildStandings(group, orderedNames) };
+    });
+
+    simulation.groups = groups;
+
+    // Restore the third-place ranking, then generate the Round of 32.
+    const thirdPlaceTeams = payload.t.split('')
+      .map(letter => groups.find(g => g.name === letter)?.standings[2])
+      .filter((s): s is GroupStanding => Boolean(s));
+    simulation.thirdPlaceTeams = thirdPlaceTeams;
+    simulation.generateKnockoutMatches();
+
+    // Replay knockout winners round by round.
+    const ids = canonicalMatchIds();
+    for (let i = 0; i < ids.length; i++) {
+      const m = simulation.getState().knockoutMatches.find(x => x.id === ids[i]);
+      if (m && m.team1 && m.team2) {
+        const winner = payload.k[i] === '1' ? m.team2 : m.team1;
+        simulation.updateKnockoutResult(ids[i], winner.name);
+      }
+    }
+
+    const state = simulation.getState();
+    const confirmedGroups: Record<string, boolean> = {};
+    groups.forEach(grp => { confirmedGroups[grp.name] = true; });
+
+    set({
+      simulation,
+      groups,
+      thirdPlaceTeams,
+      knockoutMatches: state.knockoutMatches,
+      confirmedGroups,
+      readOnly: true
+    });
+    return true;
   },
 
   updateMatchResult: (matchId, team1Score, team2Score) => {
