@@ -5,11 +5,14 @@ export class SimulationEngine {
   public groups: Group[];
   private knockoutMatches: Map<string, KnockoutMatch>;
   public thirdPlaceTeams: GroupStanding[];
+  // Maps each "3rd Group X/Y/.." slot label to the team assigned to it.
+  private thirdPlaceAllocation: Map<string, Team>;
 
   constructor() {
     this.groups = JSON.parse(JSON.stringify(initialGroups));
     this.knockoutMatches = new Map();
     this.thirdPlaceTeams = [];
+    this.thirdPlaceAllocation = new Map();
   }
 
   // Calculate group standings based on match results
@@ -127,6 +130,56 @@ export class SimulationEngine {
     });
   }
 
+  // Allocate the 8 best third-place teams to their Round-of-32 slots.
+  // Each slot only accepts thirds from a fixed set of groups (FIFA's table),
+  // so we solve it as a bipartite matching: every qualifying team fills exactly
+  // one valid slot, with no duplicates and no excluded teams sneaking in.
+  computeThirdPlaceAllocation(): void {
+    this.thirdPlaceAllocation = new Map();
+
+    // The 8 qualifiers, honouring the user's manual ranking when one is set.
+    const ranked = this.thirdPlaceTeams.length > 0
+      ? this.thirdPlaceTeams
+      : this.rankThirdPlaceTeams();
+    const qualifiers = ranked.slice(0, 8);
+    if (qualifiers.length === 0) return;
+
+    // Round-of-32 slots that take a third-place team, with their allowed groups.
+    const slots = knockoutStructure.round32
+      .filter(m => m.sourcePosition2.startsWith('3rd Group'))
+      .map(m => ({
+        label: m.sourcePosition2,
+        allowed: m.sourcePosition2.replace('3rd Group ', '').split('/')
+      }));
+
+    // Kuhn's algorithm. matchTeam[t] = index of the slot assigned to qualifier t.
+    const matchTeam: (number | null)[] = qualifiers.map(() => null);
+
+    const augment = (slotIdx: number, visited: boolean[]): boolean => {
+      for (let t = 0; t < qualifiers.length; t++) {
+        if (visited[t]) continue;
+        if (!slots[slotIdx].allowed.includes(qualifiers[t].team.group)) continue;
+        visited[t] = true;
+        if (matchTeam[t] === null || augment(matchTeam[t]!, visited)) {
+          matchTeam[t] = slotIdx;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    for (let s = 0; s < slots.length; s++) {
+      augment(s, qualifiers.map(() => false));
+    }
+
+    slots.forEach((slot, idx) => {
+      const t = matchTeam.findIndex(slotIdx => slotIdx === idx);
+      if (t !== -1) {
+        this.thirdPlaceAllocation.set(slot.label, qualifiers[t].team);
+      }
+    });
+  }
+
   // Get team for knockout position
   getTeamForPosition(position: string): Team | null {
     if (position.startsWith('Winner Group')) {
@@ -142,15 +195,9 @@ export class SimulationEngine {
     }
 
     if (position.startsWith('3rd Group')) {
-      const groupLetters = position.replace('3rd Group ', '').split('/');
-      const thirdPlaceTeams = this.rankThirdPlaceTeams();
-
-      // Find the best third-place team from the specified groups
-      for (const team of thirdPlaceTeams.slice(0, 8)) {
-        if (groupLetters.includes(team.team.group)) {
-          return team.team;
-        }
-      }
+      // Use the pre-computed allocation so each qualifying third-place team
+      // fills exactly one slot and excluded teams never appear.
+      return this.thirdPlaceAllocation.get(position) || null;
     }
 
     return null;
@@ -158,6 +205,9 @@ export class SimulationEngine {
 
   // Generate knockout matches based on group results
   generateKnockoutMatches(): void {
+    // Assign the qualifying third-place teams to their slots first.
+    this.computeThirdPlaceAllocation();
+
     // Round of 32
     knockoutStructure.round32.forEach((match, index) => {
       const team1 = this.getTeamForPosition(match.sourcePosition1);
