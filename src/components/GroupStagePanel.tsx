@@ -76,16 +76,16 @@ export default function GroupStagePanel() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
       {/* Group Selector */}
-      <div className="mb-8">
-        <div className="flex flex-wrap gap-2 justify-center">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
           {groups.map((group) => (
             <button
               key={group.name}
               onClick={() => handleGroupChange(group.name)}
               className={`
-                px-4 py-2 rounded-lg font-medium transition-all
+                px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium transition-all
                 ${selectedGroup === group.name
                   ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/25'
                   : confirmedGroups[group.name]
@@ -153,13 +153,13 @@ export default function GroupStagePanel() {
                   }
                 `}
               >
-                <div className="flex items-center p-4">
-                  {/* Drag Handle */}
-                  <Grip className="w-5 h-5 text-gray-500 mr-3" />
+                <div className="flex items-center p-3 sm:p-4">
+                  {/* Drag Handle (desktop only — touch uses the arrows) */}
+                  <Grip className="w-5 h-5 text-gray-500 mr-3 shrink-0 hidden sm:block" />
 
                   {/* Position */}
                   <div className={`
-                    w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4
+                    w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold mr-3 sm:mr-4 shrink-0 text-sm sm:text-base
                     ${index === 0 || index === 1
                       ? 'bg-green-600 text-white'
                       : index === 2
@@ -171,21 +171,21 @@ export default function GroupStagePanel() {
                   </div>
 
                   {/* Team Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-semibold text-white">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-base sm:text-lg font-semibold text-white truncate">
                         {team.name}
                       </span>
-                      <span className="text-sm text-gray-400">
+                      <span className="text-xs sm:text-sm text-gray-400 shrink-0">
                         ({team.code})
                       </span>
                       {team.isHost && (
-                        <span className="text-xs px-1.5 py-0.5 bg-blue-600/20 text-blue-400 rounded">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-blue-600/20 text-blue-400 rounded shrink-0">
                           HOST
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-[11px] sm:text-xs text-gray-500 mt-1 truncate">
                       {index === 0 || index === 1
                         ? '→ Advance to Round of 32'
                         : index === 2
@@ -196,7 +196,7 @@ export default function GroupStagePanel() {
                   </div>
 
                   {/* Move Buttons */}
-                  <div className="flex flex-col gap-1 ml-4">
+                  <div className="flex flex-col gap-1 ml-2 sm:ml-4 shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -235,20 +235,20 @@ export default function GroupStagePanel() {
             ))}
           </div>
 
-          <div className="px-6 py-4 bg-gray-900/60 border-t border-gray-700/30">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex gap-4">
+          <div className="px-4 sm:px-6 py-4 bg-gray-900/60 border-t border-gray-700/30">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="text-gray-400">Advance directly</span>
+                  <span className="text-gray-400 text-xs sm:text-sm">Advance directly</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                  <span className="text-gray-400">Best 3rd place</span>
+                  <span className="text-gray-400 text-xs sm:text-sm">Best 3rd place</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
-                  <span className="text-gray-400">Eliminated</span>
+                  <span className="text-gray-400 text-xs sm:text-sm">Eliminated</span>
                 </span>
               </div>
               <button
@@ -256,7 +256,7 @@ export default function GroupStagePanel() {
                   const { setCurrentView } = useTournamentStore.getState();
                   setCurrentView('knockout');
                 }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 w-full sm:w-auto"
               >
                 View Bracket →
               </button>
@@ -357,17 +357,30 @@ function ThirdPlaceRanking() {
     setThirdPlaceRanking(newRankings);
   };
 
+  const moveTeam = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= rankings.length) return;
+
+    const newRankings = [...rankings];
+    [newRankings[index], newRankings[newIndex]] = [newRankings[newIndex], newRankings[index]];
+
+    setRankings(newRankings);
+    setThirdPlaceRanking(newRankings);
+  };
+
   return (
     <div className="max-w-4xl mx-auto bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-      <div className="px-6 py-4 bg-gray-900/60 border-b border-gray-700/50">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Shield className="w-5 h-5 text-yellow-500" />
+      <div className="px-4 sm:px-6 py-4 bg-gray-900/60 border-b border-gray-700/50">
+        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+          <Shield className="w-5 h-5 text-yellow-500 shrink-0" />
           Third Place Teams Ranking
         </h3>
-        <p className="text-sm text-gray-400 mt-1">Drag any team to re-arrange the full ranking — the top 8 qualify for the knockout stage</p>
+        <p className="text-xs sm:text-sm text-gray-400 mt-1">
+          Drag or use the arrows to re-arrange — the top 8 qualify for the knockout stage
+        </p>
       </div>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="space-y-2">
           {rankings.map((standing, index) => (
             <div
@@ -381,34 +394,45 @@ function ThirdPlaceRanking() {
                 setDraggedOver(null);
               }}
               className={`
-                px-4 py-3 rounded-lg flex items-center justify-between transition-all cursor-move
+                px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-lg flex items-center gap-2 sm:gap-3 transition-all
                 ${index < 8
-                  ? 'bg-green-900/30 border border-green-600/30 text-green-400 hover:bg-green-900/40'
-                  : 'bg-gray-800/60 border border-gray-700/30 text-gray-400 hover:bg-gray-800/80'
+                  ? 'bg-green-900/30 border border-green-600/30 text-green-400'
+                  : 'bg-gray-800/60 border border-gray-700/30 text-gray-400'
                 }
                 ${draggedOver === index ? 'scale-105 opacity-50' : ''}
                 ${draggedTeam?.team.name === standing.team.name ? 'opacity-50' : ''}
               `}
             >
-              <div className="flex items-center gap-3">
-                <Grip className="w-4 h-4 text-gray-500" />
-                <span className="font-semibold">
-                  {index + 1}.
-                </span>
-                <span className="font-medium">
-                  {standing.team.name}
-                </span>
-                <span className="text-xs opacity-75">
-                  ({standing.team.code} - Group {standing.team.group})
-                </span>
+              <Grip className="w-4 h-4 text-gray-500 shrink-0 hidden sm:block cursor-move" />
+              <span className="font-semibold text-sm w-5 shrink-0 text-center">{index + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{standing.team.name}</div>
+                <div className="text-[11px] opacity-70 truncate">
+                  {standing.team.code} · Grp {standing.team.group} · {standing.points} pts · GD {standing.goalDifference > 0 ? '+' : ''}{standing.goalDifference}
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm">
-                  {standing.points} pts | GD: {standing.goalDifference > 0 ? '+' : ''}{standing.goalDifference}
+              {index < 8 && (
+                <span className="text-[10px] px-2 py-1 bg-green-600/20 rounded shrink-0 hidden sm:inline-block">
+                  Qualified
                 </span>
-                {index < 8 && (
-                  <span className="text-xs px-2 py-1 bg-green-600/20 rounded">Qualified</span>
-                )}
+              )}
+              <div className="flex flex-col gap-0.5 shrink-0">
+                <button
+                  onClick={() => moveTeam(index, 'up')}
+                  disabled={index === 0}
+                  className={`p-1 rounded transition-colors ${index === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-700/60'}`}
+                  aria-label="Move up"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => moveTeam(index, 'down')}
+                  disabled={index === rankings.length - 1}
+                  className={`p-1 rounded transition-colors ${index === rankings.length - 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-700/60'}`}
+                  aria-label="Move down"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}

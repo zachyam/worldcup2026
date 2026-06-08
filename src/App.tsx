@@ -28,18 +28,18 @@ function App() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] pointer-events-none" />
 
       {/* Header / Navigation */}
-      <header className="h-14 shrink-0 border-b border-zinc-800/80 bg-zinc-950/50 backdrop-blur-md flex items-center justify-between px-6 z-10 sticky top-0">
-        <div className="flex items-center gap-8">
+      <header className="h-14 shrink-0 border-b border-zinc-800/80 bg-zinc-950/50 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 z-10 sticky top-0 gap-2">
+        <div className="flex items-center gap-3 sm:gap-8 min-w-0">
           {/* Logo */}
-          <div className="flex items-center gap-2.5 cursor-pointer group">
+          <div className="flex items-center gap-2.5 cursor-pointer group shrink-0">
             <div className="w-6 h-6 rounded-md bg-zinc-100 text-zinc-950 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Trophy className="w-3.5 h-3.5" strokeWidth={1.5} />
             </div>
-            <span className="text-sm font-semibold tracking-tighter text-zinc-100">WCSIM</span>
+            <span className="hidden sm:inline text-sm font-semibold tracking-tighter text-zinc-100">WCSIM</span>
           </div>
 
           {/* Segmented Control */}
-          <div className="hidden md:flex items-center gap-1 bg-zinc-900/80 p-1 rounded-md border border-zinc-800/60">
+          <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-md border border-zinc-800/60">
             <button
               onClick={() => setCurrentView('groups')}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors focus:outline-none ${

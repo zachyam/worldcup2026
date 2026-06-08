@@ -103,7 +103,7 @@ export default function TournamentBracket() {
   };
 
   return (
-    <div className="min-w-max h-full flex items-center justify-center gap-12 p-12 md:p-24 mx-auto">
+    <div className="min-w-max h-full flex items-center justify-center gap-6 sm:gap-12 p-4 sm:p-12 md:p-24 mx-auto">
 
       {/* LEFT BRACKET */}
       <div className="flex items-center gap-10">
