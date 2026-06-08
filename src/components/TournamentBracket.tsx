@@ -26,8 +26,8 @@ const teamColors: Record<string, string> = {
   'Switzerland': 'bg-red-600',
 };
 
-// Resolve a team's group origin as a short tag, e.g. "1A" (group A winner),
-// "2C" (group C runner-up) or "3F" (group F third place).
+// Resolve a team's group origin as a label, e.g. "Winner A",
+// "Runner-up C" or "3rd F".
 function groupTagFor(groups: Group[], team: Team | null): string | null {
   if (!team) return null;
   const group =
@@ -35,7 +35,9 @@ function groupTagFor(groups: Group[], team: Team | null): string | null {
     groups.find(g => g.standings.some(s => s.team.name === team.name));
   if (!group) return null;
   const index = group.standings.findIndex(s => s.team.name === team.name);
-  return index === -1 ? null : `${index + 1}${group.name}`;
+  if (index === -1) return null;
+  const position = index === 0 ? 'Winner' : index === 1 ? 'Runner-up' : index === 2 ? '3rd' : `${index + 1}th`;
+  return `${position} ${group.name}`;
 }
 
 export default function TournamentBracket() {
@@ -383,7 +385,7 @@ function TeamRow({
           {team ? team.name : (sourceLabel || 'TBD')}
         </span>
         {team && groupTag && (
-          <span className="text-[10px] font-semibold tracking-wider text-zinc-600">
+          <span className="text-[10px] font-semibold tracking-wide text-zinc-600 whitespace-nowrap shrink-0">
             {groupTag}
           </span>
         )}
@@ -441,7 +443,7 @@ function FinalTeamRow({
           {team ? team.name : 'TBD'}
         </span>
         {team && groupTag && (
-          <span className="text-[10px] font-semibold tracking-wider text-zinc-500">
+          <span className="text-[10px] font-semibold tracking-wide text-zinc-500 whitespace-nowrap shrink-0">
             {groupTag}
           </span>
         )}
