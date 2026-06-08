@@ -1,5 +1,6 @@
 import type { Team, Match, Group, GroupStanding, KnockoutMatch } from '../types/tournament';
 import { groups as initialGroups, knockoutStructure } from '../data/tournamentData';
+import { THIRD_PLACE_ALLOCATION, THIRD_PLACE_WINNER_ORDER } from '../data/thirdPlaceAllocation';
 
 export class SimulationEngine {
   public groups: Group[];
@@ -130,10 +131,9 @@ export class SimulationEngine {
     });
   }
 
-  // Allocate the 8 best third-place teams to their Round-of-32 slots.
-  // Each slot only accepts thirds from a fixed set of groups (FIFA's table),
-  // so we solve it as a bipartite matching: every qualifying team fills exactly
-  // one valid slot, with no duplicates and no excluded teams sneaking in.
+  // Allocate the 8 best third-place teams to their Round-of-32 slots using
+  // FIFA's official Annex C table: the exact slot for each third depends on
+  // which eight groups supplied the qualifying thirds.
   computeThirdPlaceAllocation(): void {
     this.thirdPlaceAllocation = new Map();
 
@@ -142,9 +142,39 @@ export class SimulationEngine {
       ? this.thirdPlaceTeams
       : this.rankThirdPlaceTeams();
     const qualifiers = ranked.slice(0, 8);
+    if (qualifiers.length < 8) {
+      // Not all groups have results yet — fall back to constraint matching.
+      this.matchThirdPlaceTeams(qualifiers);
+      return;
+    }
+
+    // Look up the official assignment for this set of qualifying groups.
+    const key = qualifiers.map(q => q.team.group).sort().join('');
+    const row = THIRD_PLACE_ALLOCATION[key];
+    if (!row) {
+      this.matchThirdPlaceTeams(qualifiers);
+      return;
+    }
+
+    // row[i] is the group of the third-place team facing winner of group
+    // THIRD_PLACE_WINNER_ORDER[i]. Map each winner's slot to that team.
+    const teamByGroup = new Map(qualifiers.map(q => [q.team.group, q.team]));
+    knockoutStructure.round32.forEach(m => {
+      if (!m.sourcePosition2.startsWith('3rd Group')) return;
+      const winner = m.sourcePosition1.replace('Winner Group ', '');
+      const slotIdx = THIRD_PLACE_WINNER_ORDER.indexOf(winner as never);
+      if (slotIdx === -1) return;
+      const team = teamByGroup.get(row[slotIdx]);
+      if (team) this.thirdPlaceAllocation.set(m.sourcePosition2, team);
+    });
+  }
+
+  // Fallback allocation (used before all groups finish, or for any combination
+  // not covered by the official table): bipartite matching that respects each
+  // slot's allowed group set so no team is duplicated or wrongly included.
+  private matchThirdPlaceTeams(qualifiers: GroupStanding[]): void {
     if (qualifiers.length === 0) return;
 
-    // Round-of-32 slots that take a third-place team, with their allowed groups.
     const slots = knockoutStructure.round32
       .filter(m => m.sourcePosition2.startsWith('3rd Group'))
       .map(m => ({
