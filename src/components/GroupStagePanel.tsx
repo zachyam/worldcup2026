@@ -288,10 +288,13 @@ function ThirdPlaceRanking() {
   const [draggedOver, setDraggedOver] = useState<number | null>(null);
   const [rankings, setRankings] = useState<GroupStanding[]>(thirdPlaceTeams);
 
-  // Update rankings when third place teams change
-  useState(() => {
+  // Re-sync the local order when the store's third-place teams change
+  // (e.g. after group results are edited). Render-phase update avoids an effect.
+  const [syncedTeams, setSyncedTeams] = useState(thirdPlaceTeams);
+  if (syncedTeams !== thirdPlaceTeams) {
+    setSyncedTeams(thirdPlaceTeams);
     setRankings(thirdPlaceTeams);
-  });
+  }
 
   if (thirdPlaceTeams.length === 0) {
     return null;
@@ -303,17 +306,15 @@ function ThirdPlaceRanking() {
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (index < 8) { // Only allow dragging within top 8
-      setDraggedOver(index);
-    }
+    setDraggedOver(index);
   };
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
-    if (!draggedTeam || dropIndex >= 8) return;
+    if (!draggedTeam) return;
 
     const draggedIndex = rankings.findIndex(s => s.team.name === draggedTeam.team.name);
-    if (draggedIndex === dropIndex || draggedIndex >= 8) return; // Don't allow dragging from outside top 8
+    if (draggedIndex === dropIndex) return;
 
     const newRankings = [...rankings];
     newRankings.splice(draggedIndex, 1);
@@ -334,16 +335,16 @@ function ThirdPlaceRanking() {
           <Shield className="w-5 h-5 text-yellow-500" />
           Third Place Teams Ranking
         </h3>
-        <p className="text-sm text-gray-400 mt-1">Drag to re-arrange the top 8 teams that qualify for knockout stage</p>
+        <p className="text-sm text-gray-400 mt-1">Drag any team to re-arrange the full ranking — the top 8 qualify for the knockout stage</p>
       </div>
 
       <div className="p-6">
         <div className="space-y-2">
-          {rankings.slice(0, 12).map((standing, index) => (
+          {rankings.map((standing, index) => (
             <div
               key={standing.team.name}
-              draggable={index < 8}
-              onDragStart={() => index < 8 && handleDragStart(standing)}
+              draggable
+              onDragStart={() => handleDragStart(standing)}
               onDragOver={(e) => handleDragOver(e, index)}
               onDrop={(e) => handleDrop(e, index)}
               onDragEnd={() => {
@@ -351,17 +352,17 @@ function ThirdPlaceRanking() {
                 setDraggedOver(null);
               }}
               className={`
-                px-4 py-3 rounded-lg flex items-center justify-between transition-all
+                px-4 py-3 rounded-lg flex items-center justify-between transition-all cursor-move
                 ${index < 8
-                  ? 'bg-green-900/30 border border-green-600/30 text-green-400 cursor-move hover:bg-green-900/40'
-                  : 'bg-gray-800/60 border border-gray-700/30 text-gray-500 cursor-not-allowed'
+                  ? 'bg-green-900/30 border border-green-600/30 text-green-400 hover:bg-green-900/40'
+                  : 'bg-gray-800/60 border border-gray-700/30 text-gray-400 hover:bg-gray-800/80'
                 }
                 ${draggedOver === index ? 'scale-105 opacity-50' : ''}
                 ${draggedTeam?.team.name === standing.team.name ? 'opacity-50' : ''}
               `}
             >
               <div className="flex items-center gap-3">
-                {index < 8 && <Grip className="w-4 h-4 text-gray-500" />}
+                <Grip className="w-4 h-4 text-gray-500" />
                 <span className="font-semibold">
                   {index + 1}.
                 </span>

@@ -1,7 +1,7 @@
 import { useTournamentStore } from '../store/tournamentStore';
 import { Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Team, KnockoutMatch } from '../types/tournament';
+import type { Team, KnockoutMatch, Group } from '../types/tournament';
 
 // Team colors mapping
 const teamColors: Record<string, string> = {
@@ -25,6 +25,18 @@ const teamColors: Record<string, string> = {
   'Senegal': 'bg-green-600',
   'Switzerland': 'bg-red-600',
 };
+
+// Resolve a team's group origin as a short tag, e.g. "1A" (group A winner),
+// "2C" (group C runner-up) or "3F" (group F third place).
+function groupTagFor(groups: Group[], team: Team | null): string | null {
+  if (!team) return null;
+  const group =
+    groups.find(g => g.name === team.group) ||
+    groups.find(g => g.standings.some(s => s.team.name === team.name));
+  if (!group) return null;
+  const index = group.standings.findIndex(s => s.team.name === team.name);
+  return index === -1 ? null : `${index + 1}${group.name}`;
+}
 
 export default function TournamentBracket() {
   const { knockoutMatches, groups, generateKnockout, updateKnockoutResult } = useTournamentStore();
@@ -253,6 +265,8 @@ function MatchCard({
   onWinnerSelect: (match: KnockoutMatch, winner: Team) => void;
   isSemifinal?: boolean;
 }) {
+  const groups = useTournamentStore(s => s.groups);
+
   const getTeamColor = (team: Team | null) => {
     if (!team) return 'bg-zinc-700';
     return teamColors[team.name] || 'bg-zinc-600';
@@ -315,6 +329,7 @@ function MatchCard({
         onClick={() => match.team1 && match.team2 && onWinnerSelect(match, match.team1)}
         isTop
         sourceLabel={getTeamSourceLabel(match.team1, 'team1')}
+        groupTag={groupTagFor(groups, match.team1)}
       />
       <TeamRow
         team={match.team2}
@@ -323,6 +338,7 @@ function MatchCard({
         teamColor={getTeamColor(match.team2)}
         onClick={() => match.team2 && match.team1 && onWinnerSelect(match, match.team2)}
         sourceLabel={getTeamSourceLabel(match.team2, 'team2')}
+        groupTag={groupTagFor(groups, match.team2)}
       />
     </div>
   );
@@ -336,7 +352,8 @@ function TeamRow({
   teamColor,
   onClick,
   isTop = false,
-  sourceLabel
+  sourceLabel,
+  groupTag
 }: {
   team: Team | null;
   score?: number;
@@ -345,6 +362,7 @@ function TeamRow({
   onClick: () => void;
   isTop?: boolean;
   sourceLabel?: string | null;
+  groupTag?: string | null;
 }) {
   return (
     <div
@@ -358,15 +376,15 @@ function TeamRow({
       <div className={`absolute inset-y-0 left-0 w-1 ${teamColor} ${
         isWinner ? '' : 'opacity-30'
       }`} />
-      <div className="flex-1">
+      <div className="flex-1 flex items-baseline gap-1.5">
         <span className={`text-xs tracking-tight pl-1.5 ${
           isWinner ? 'font-semibold text-zinc-100' : 'font-medium text-zinc-500 group-hover:text-zinc-400 transition-colors'
         }`}>
           {team ? team.name : (sourceLabel || 'TBD')}
         </span>
-        {!team && sourceLabel && (
-          <span className="text-[10px] text-zinc-600 pl-1.5 block">
-            {/* Group info will be shown in sourceLabel */}
+        {team && groupTag && (
+          <span className="text-[10px] font-semibold tracking-wider text-zinc-600">
+            {groupTag}
           </span>
         )}
       </div>
@@ -395,6 +413,9 @@ function FinalTeamRow({
   onClick: () => void;
   isSecond?: boolean;
 }) {
+  const groups = useTournamentStore(s => s.groups);
+  const groupTag = groupTagFor(groups, team);
+
   const getTeamColor = (team: Team | null) => {
     if (!team) return 'bg-zinc-700';
     return teamColors[team.name] || 'bg-zinc-600';
@@ -419,6 +440,11 @@ function FinalTeamRow({
         }`}>
           {team ? team.name : 'TBD'}
         </span>
+        {team && groupTag && (
+          <span className="text-[10px] font-semibold tracking-wider text-zinc-500">
+            {groupTag}
+          </span>
+        )}
       </div>
       {score !== undefined && (
         <span className={`text-sm ${
