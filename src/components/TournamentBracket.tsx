@@ -103,7 +103,42 @@ export default function TournamentBracket() {
   };
 
   return (
-    <div className="min-w-max h-full flex items-center justify-center gap-6 sm:gap-12 p-4 sm:p-12 md:p-24 mx-auto">
+    <>
+      {/* Mobile / tablet: rounds stacked vertically (the wide bracket below
+          only works on large screens). */}
+      <div className="lg:hidden max-w-2xl mx-auto px-4 py-6 space-y-8">
+        <div className="flex flex-col items-center">
+          <div className={`w-14 h-14 rounded-full bg-zinc-900/80 border flex items-center justify-center mb-3 ${
+            champion ? 'border-yellow-500/40 shadow-[0_0_40px_-10px_rgba(250,204,21,0.3)]' : 'border-zinc-800'
+          }`}>
+            <Trophy className={`w-7 h-7 ${champion ? 'text-yellow-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 'text-zinc-600'}`} strokeWidth={1.5} />
+          </div>
+          <span className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-1">World Champions</span>
+          <h1 className="text-2xl font-semibold tracking-tighter text-zinc-100">
+            {champion ? champion.name.toUpperCase() : 'TBD'}
+          </h1>
+        </div>
+
+        {([
+          ['Round of 32', matchesByStage.round32],
+          ['Round of 16', matchesByStage.round16],
+          ['Quarterfinals', matchesByStage.quarter],
+          ['Semifinals', matchesByStage.semi],
+          ['Final', matchesByStage.final],
+        ] as const).map(([label, matches]) => (
+          <section key={label}>
+            <h3 className="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-medium mb-3 text-center">{label}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 justify-items-center">
+              {matches.map(match => (
+                <MatchCard key={match.id} match={match} onWinnerSelect={handleMatchClick} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {/* Desktop: full horizontal bracket */}
+      <div className="hidden lg:flex min-w-max h-full items-center justify-center gap-6 sm:gap-12 p-4 sm:p-12 md:p-24 mx-auto">
 
       {/* LEFT BRACKET */}
       <div className="flex items-center gap-10">
@@ -237,6 +272,7 @@ export default function TournamentBracket() {
       </div>
 
     </div>
+    </>
   );
 }
 
