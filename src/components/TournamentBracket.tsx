@@ -104,9 +104,9 @@ export default function TournamentBracket() {
 
   return (
     <>
-      {/* Mobile / tablet: rounds stacked vertically (the wide bracket below
-          only works on large screens). */}
-      <div className="lg:hidden max-w-2xl mx-auto px-4 py-6 space-y-8">
+      {/* Mobile: rounds stacked vertically (the wide bracket below
+          only works on wider screens). */}
+      <div className="md:hidden max-w-2xl mx-auto px-4 py-6 space-y-8">
         <div className="flex flex-col items-center">
           <div className={`w-14 h-14 rounded-full bg-zinc-900/80 border flex items-center justify-center mb-3 ${
             champion ? 'border-yellow-500/40 shadow-[0_0_40px_-10px_rgba(250,204,21,0.3)]' : 'border-zinc-800'
@@ -138,7 +138,7 @@ export default function TournamentBracket() {
       </div>
 
       {/* Desktop: full horizontal bracket */}
-      <div className="hidden lg:flex min-w-max h-full items-center justify-center gap-6 sm:gap-12 p-4 sm:p-12 md:p-24 mx-auto">
+      <div className="hidden md:flex min-w-max h-full items-center justify-center gap-6 sm:gap-12 p-4 sm:p-12 md:p-24 mx-auto">
 
       {/* LEFT BRACKET */}
       <div className="flex items-center gap-10">
