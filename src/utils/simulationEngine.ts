@@ -257,6 +257,37 @@ export class SimulationEngine {
         this.knockoutMatches.set(match.id, knockoutMatch);
       }
     });
+
+    // Pre-create placeholder matches for the later rounds so the full bracket
+    // is visible from the start; teams fill in as winners are chosen.
+    const addPlaceholder = (
+      id: string,
+      matchNumber: number,
+      date: string,
+      stage: KnockoutMatch['stage'],
+      sourceMatch1: string,
+      sourceMatch2: string
+    ) => {
+      if (!this.knockoutMatches.has(id)) {
+        this.knockoutMatches.set(id, {
+          id, matchNumber, date, stage,
+          team1: null as unknown as Team,
+          team2: null as unknown as Team,
+          sourceMatch1, sourceMatch2
+        });
+      }
+    };
+
+    knockoutStructure.round16.forEach((m, i) =>
+      addPlaceholder(m.id, 89 + i, '2026-07-04', 'round16', m.sourceMatch1, m.sourceMatch2));
+    knockoutStructure.quarterfinals.forEach((m, i) =>
+      addPlaceholder(m.id, 97 + i, '2026-07-09', 'quarter', m.sourceMatch1, m.sourceMatch2));
+    knockoutStructure.semifinals.forEach((m, i) =>
+      addPlaceholder(m.id, 101 + i, '2026-07-14', 'semi', m.sourceMatch1, m.sourceMatch2));
+    addPlaceholder(
+      knockoutStructure.final.id, 104, '2026-07-19', 'final',
+      knockoutStructure.final.sourceMatch1, knockoutStructure.final.sourceMatch2
+    );
   }
 
   // Update knockout match result and progress winner
